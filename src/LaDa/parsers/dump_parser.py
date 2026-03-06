@@ -13,7 +13,9 @@ class DumpFrame:
 
 # 2. Create the generator function
 def iter_dump_frames(filepath: str) -> Iterator[DumpFrame]:
-    """Dynamically parses a LAMMPS dump file with unpredictable headers."""
+    """
+    Dynamically parses a LAMMPS dump file with unpredictable headers.
+    """
     
     metadata = {}
     columns = []
@@ -26,7 +28,7 @@ def iter_dump_frames(filepath: str) -> Iterator[DumpFrame]:
             if not stripped:
                 continue    # Continue if empty line
                 
-            # Check if we are starting a new block of data
+            # Check if new data block starts (identified by the "ITEM:" keyword)
             if stripped.startswith("ITEM:"):
                 # Extract the name of the header (e.g., "TIMESTEP", "BOX BOUNDS pp pp pp")
                 header_content = stripped[5:].strip()
