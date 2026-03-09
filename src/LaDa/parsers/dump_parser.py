@@ -2,21 +2,84 @@ import numpy as np
 import pandas as pd
 import itertools
 from dataclasses import dataclass
-from typing import List, Iterator
+from typing import Iterator
 
 # 1. Data structure to hold dump data
 @dataclass
 class DumpFrame:
-    metadata: dict[str, List[str]]  # Stores any ITEM block as a list of strings
-    columns: List[str]              # The names of the atom data columns
-    data: np.ndarray                # The numerical atom data
+    metadata: dict[str, list[str] | np.ndarray | int]  # Stores any ITEM block as a list of strings (or parsed numpy arrays)
+    columns: list[str]                           # The names of the atom data columns
+    data: np.ndarray                             # The numerical atom data
+
 
 def iter_dump_frames(filepath: str) -> Iterator[DumpFrame]:
-    """
-    Dynamically parses a LAMMPS dump file with unpredictable headers.
+    """Yield frames from a LAMMPS dump file.
 
-    -> Assumes that each block of new data in the dump file starts with the line "ITEM: TIMESTEP"
+    Each frame corresponds to a single timestep block in the dump file. The function
+    is designed to cope with LAMMPS dump output where the order and presence of
+    `ITEM:` blocks is not strictly fixed.
+
+    Frames are yielded as `DumpFrame` objects with:
+    - `metadata`: dict where each key is the `ITEM:` header (e.g., "TIMESTEP", "BOX BOUNDS pp pp pp") and
+      each value is the list of following lines for that block (converted when possible).
+    - `columns`: atom column names specified in the `ITEM: ATOMS ...` line.
+    - `data`: a NumPy array built from the atom data block (via `np.loadtxt`).
+
+    Metadata conversion rules:
+    - "TIMESTEP" is converted to `int` when possible.
+    - "NUMBER OF ..." entries are converted to `int` when possible.
+    - "BOX BOUNDS ..." entries are parsed into floats and returned either as:
+        * a NumPy array (regular 2D) when each line has the same number of values, or
+        * a list of float lists when the box bounds contain mixed-length lines.
+
+    Args:
+        filepath: Path to a LAMMPS dump file.
+
+    Yields:
+        DumpFrame objects for each timestep found in the file.
     """
+
+    def _convert_metadata(meta: dict[str, list[str] | np.ndarray | int]) -> dict[str, list[str] | np.ndarray | int]:
+        """Normalize/convert common metadata values.
+
+        This helper mutates `meta` in-place (on a copy) and returns it.
+
+        Conversion rules:
+        - `BOX BOUNDS...`: parse each line as floats. If every line has the same
+          number of values, the result becomes a regular `np.ndarray`. Otherwise,
+          the result remains a `list[list[float]]`.
+        - `TIMESTEP`: convert to `int` (from single-string list).
+        - `NUMBER OF...`: convert to `int` (from single-string list).
+
+        Args:
+            meta: The metadata dict to normalize.
+
+        Returns:
+            The normalized metadata dict.
+        """
+        for key, value in list(meta.items()):
+            if key.startswith("BOX BOUNDS") and isinstance(value, list):
+                try:
+                    meta[key] = np.array([list(map(float, line.split())) for line in value])
+                except Exception:
+                    # If conversion fails, keep the original list of strings
+                    pass
+
+            elif key == "TIMESTEP" and isinstance(value, list) and value:
+                try:
+                    meta[key] = int(value[0])
+                except Exception:
+                    # If conversion fails, keep the original list of strings
+                    pass
+
+            elif key.startswith("NUMBER OF") and isinstance(value, list) and value:
+                try:
+                    meta[key] = int(value[0])
+                except Exception:
+                    # If conversion fails, keep the original list of strings
+                    pass
+
+        return meta
     
     metadata = {}
     columns = []
@@ -37,8 +100,9 @@ def iter_dump_frames(filepath: str) -> Iterator[DumpFrame]:
                 # If we hit a new TIMESTEP and we already have atom data, 
                 # we know the previous frame is finished. Yield it!
                 if header_content.startswith("TIMESTEP") and bulk_data:
+                    frame_metadata = _convert_metadata(metadata.copy())
                     yield DumpFrame(
-                        metadata=metadata.copy(),
+                        metadata=frame_metadata,
                         columns=columns.copy(),
                         data=np.loadtxt(bulk_data)
                     )
@@ -76,8 +140,9 @@ def iter_dump_frames(filepath: str) -> Iterator[DumpFrame]:
                     
         # When the file ends, yield the very last frame
         if bulk_data:
+            frame_metadata = _convert_metadata(metadata)
             yield DumpFrame(
-                metadata=metadata,
+                metadata=frame_metadata,
                 columns=columns,
                 data=np.loadtxt(bulk_data)
             )
