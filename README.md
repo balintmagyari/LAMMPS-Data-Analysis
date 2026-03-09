@@ -1,6 +1,6 @@
-# LaDa
+# lada
 
-LaDa (LAMMPS Data Access) is a lightweight Python package for parsing common LAMMPS output formats. It provides simple, streaming-friendly access to dump files, log files, and LAMMPS data files, with minimal dependencies.
+lada (LAMMPS Data Access) is a lightweight Python package for parsing common LAMMPS output formats. It provides simple, streaming-friendly access to dump files, log files, and LAMMPS data files, with minimal dependencies.
 
 ---
 
