@@ -49,7 +49,7 @@ for frame in iter_dump_frames("path/to/dump_file.dump"):
     xs  = frame.get_column("x")
 
     # convert the atom block into a pandas DataFrame
-    df = frame.to_dataframe()
+    df = frame.to_pandas()
 ```
 
 ### Notes on metadata conversion
