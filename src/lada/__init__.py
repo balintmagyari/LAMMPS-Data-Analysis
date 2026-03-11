@@ -3,7 +3,7 @@
 This package exposes a small API for streaming frames from LAMMPS dump files.
 """
 
-from .parsers import iter_dump_frames
+from .parsers import iter_dump_frames, dump_frames
 from .parsers import read_lammps_log
 from .parsers import read_data_file
 
