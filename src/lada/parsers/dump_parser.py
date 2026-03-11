@@ -43,6 +43,10 @@ def iter_dump_frames(filepath: str) -> Iterator[DumpFrame]:
     is designed to cope with LAMMPS dump output where the order and presence of
     `ITEM:` blocks is not strictly fixed.
 
+    However, the function relies on the assumption that each new block of code belonging
+    to different timesteps starts with the line "ITEM: TIMESTEP". If this is not the case
+    the function will not work properly!
+
     Frames are yielded as `DumpFrame` objects with:
     - `metadata`: dict where each key is the `ITEM:` header (e.g., "TIMESTEP", "BOX BOUNDS pp pp pp") and
       each value is the list of following lines for that block (converted when possible).
