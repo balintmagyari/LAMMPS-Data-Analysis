@@ -1,6 +1,12 @@
 # lada
 
-lada (LAMMPS Data Access) is a lightweight Python package for parsing common LAMMPS output formats. It provides simple, streaming-friendly access to dump files, log files, and LAMMPS data files, with minimal dependencies.
+**lada** (LAMMPS Data Access) is a lightweight Python package for parsing common LAMMPS output formats. The name is, quite intentionally, borrowed from the legendary Soviet car brand **Lada**—because much like its cars, this library aims to be simple, reliable, and able to run just about anywhere without unnecessary luxury features.
+
+In its current state, the library provides straightforward, user-friendly access to LAMMPS dump files, log files, and data files, while keeping external dependencies to a minimum.
+
+Future development will expand the package beyond parsing, adding analysis tools that operate directly on the retrieved simulation data.
+
+Like a classic Lada: it may not come with heated seats or chrome trim, but it will get your data from point A to point B without complaint.
 
 ---
 
@@ -12,7 +18,7 @@ Install using `pip` from PyPI:
 pip install lada
 ```
 
-> Note: The package is designed to be used with Python 3.8+.
+> Note: The package is designed to be used with Python 3.12+.
 
 ---
 
@@ -20,14 +26,14 @@ pip install lada
 
 The core parser modules are located in `src/lada/parsers/`:
 
-- `dump_parser.py` - streaming parser for LAMMPS dump files (i.e., output from [`dump`](https://docs.lammps.org/dump.html) command) using `iter_dump_frames()`
+- `dump_parser.py` - streaming parser for LAMMPS dump files (i.e., output from [`dump`](https://docs.lammps.org/dump.html) command) using `dump_frames()`
 - `log_parser.py` - parser for LAMMPS log files using `read_lammps_log()`
-- `data_parser.py` - parser for LAMMPS data files (i.e., output form [`write_data`](https://docs.lammps.org/write_data.html) command) using `read_data_file()`
+- `data_parser.py` - parser for LAMMPS data files (i.e., output from [`write_data`](https://docs.lammps.org/write_data.html) command) using `read_data_file()`
 
 To keep imports simple, the package exports the most common entry point:
 
 ```python
-from lada import iter_dump_frames, read_lammps_log, read_data_file
+from lada import dump_frames, read_lammps_log, read_data_file
 ```
 
 ---
@@ -37,10 +43,10 @@ from lada import iter_dump_frames, read_lammps_log, read_data_file
 ### Main API
 
 ```python
-from lada import iter_dump_frames
+from lada import dump_frames
 
-for frame in iter_dump_frames("path/to/dump_file.dump"):
-    # metadata is a dict of "ITEM:" blocks
+for frame in dump_frames("path/to/dump_file.dump"):
+    # metadata is a dict of "ITEM:" blocks before main data
     timestep = frame.metadata["TIMESTEP"]          # int
     box_bounds = frame.metadata["BOX BOUNDS pp pp pp"]
 
@@ -48,7 +54,7 @@ for frame in iter_dump_frames("path/to/dump_file.dump"):
     ids = frame.get_column("id")
     xs  = frame.get_column("x")
 
-    # convert the atom block into a pandas DataFrame
+    # convert the main data block into a pandas DataFrame
     df = frame.to_pandas()
 ```
 
