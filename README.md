@@ -1,12 +1,12 @@
-# lada
+# LaDa
 
-**lada** (LAMMPS Data Access) is a lightweight Python package for parsing common LAMMPS output formats. The name is, quite intentionally, borrowed from the legendary Soviet car brand **Lada**—because much like its cars, this library aims to be simple, reliable, and able to run just about anywhere without unnecessary luxury features.
+**LaDa** (LAMMPS Data Access) is a lightweight Python package for parsing common LAMMPS output formats. The name is, quite intentionally, borrowed from the legendary Soviet car brand **LADA**—because much like its cars, this library aims to be simple, reliable, and able to run just about anywhere without unnecessary luxury features.
 
 In its current state, the library provides straightforward, user-friendly access to LAMMPS dump files, log files, and data files, while keeping external dependencies to a minimum.
 
 Future development will expand the package beyond parsing, adding analysis tools that operate directly on the retrieved simulation data.
 
-Like a classic Lada: it may not come with heated seats or chrome trim, but it will get your data from point A to point B without complaint.
+Like a classic LADA: it may not come with heated seats or chrome trim, but it will get your data from point A to point B without complaint.
 
 ---
 
