@@ -40,7 +40,7 @@ from lada import dump_frames, read_lammps_log, read_data_file
 
 ## 🧩 1) Parsing LAMMPS dump files (`dump_parser.py`)
 
-### Main API
+### Iterate through frames from dump file
 
 ```python
 from lada import dump_frames
@@ -58,7 +58,12 @@ for frame in dump_frames("path/to/dump_file.dump"):
     df = frame.to_pandas()
 ```
 
-### Notes on metadata conversion
+> This functionality is useful for performing calculations iteratively on 
+data belonging to individual timesteps (e.g. radius of gyration). However, 
+for calculations that require more than one timestep's data, the `read_dump`
+function is more appropriate, the usage of which is [described below](#read-entire-main-data-from-dump-file).
+
+#### Notes on metadata conversion
 
 - `TIMESTEP` is returned as an `int`.
 - `NUMBER OF ...` entries (e.g., `NUMBER OF ATOMS`) are converted to `int`.
@@ -66,7 +71,7 @@ for frame in dump_frames("path/to/dump_file.dump"):
   - For orthogonal boxes, you get a 2D NumPy array shape `(3, 2)`.
   - For triclinic boxes, you get a 2D NumPy array shape `(3, 3)` where the 3rd column contains tilt factors (xy, xz, yz).
 
-### Column helpers
+#### Column helpers
 
 These helpers avoid manual index lookups:
 
@@ -75,6 +80,23 @@ ids = frame.get_column("id")
 atom_ids = frame.get_column_or("id", default=None)
 col_idx = frame.column_index("type")
 ```
+
+### Read entire main data from dump file
+
+```python
+from lada import read_dump
+
+df = read_dump("path/to/dump_file.dump", timestep_col="Timestep") # value of 'timestep_col' determines the column name of the timesteps data
+```
+
+#### Notes on usage
+
+While the previously described `dump_frames` function reads not only 
+the main data from the dump file but also the metadata written at the 
+beginning of each block, the `read_dump` function does not save any of
+the metadata information other than the current timestep, whose data
+is appended to the final dataframe as a separate column next to the 
+bulk data read from the dump file.
 
 ---
 
