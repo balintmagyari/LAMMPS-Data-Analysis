@@ -273,5 +273,8 @@ def calculate_ree_vectors(
     # Cast IDs back to integers (column_stack forces floats if coords are floats)
     result_df[timestep_col] = result_df[timestep_col].astype(int)
     result_df[molecule_col] = result_df[molecule_col].astype(int)
+
+    if not has_timesteps:
+        result_df = result_df.drop(columns=timestep_col)
     
     return result_df
