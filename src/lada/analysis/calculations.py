@@ -176,3 +176,102 @@ def calculate_avg_ree_sq(
         return list(ree_sq_by_timestep.values())[0]
     else:
         return ree_sq_by_timestep
+    
+
+def calculate_ree_vectors(
+    df: pd.DataFrame | np.ndarray,
+    columns: list[str] | None = None,
+    coord_cols: list[str] = ['xu', 'yu', 'zu'],
+    molecule_col: str = 'mol',
+    timestep_col: str = 'timestep',
+    atom_id_col: str = 'id'
+) -> pd.DataFrame:
+    """
+    Compute the individual end-to-end vectors for each molecule at each timestep.
+    Returns a DataFrame containing the timestep, molecule ID, and vector components (dx, dy, dz).
+    """
+    
+    # 1. Standardize input and validate columns
+    if isinstance(df, pd.DataFrame):
+        cols = df.columns.tolist()
+        arr = df.to_numpy()
+    elif isinstance(df, np.ndarray):
+        if columns is None:
+            raise ValueError("Must provide 'columns' list when passing a NumPy array.")
+        cols = columns
+        arr = df
+    else:
+        raise TypeError("Data must be a pandas.DataFrame or numpy.ndarray.")
+    
+    # Extract column indices
+    try:
+        mol_idx = cols.index(molecule_col)
+        id_idx = cols.index(atom_id_col)
+        x_idx, y_idx, z_idx = [cols.index(c) for c in coord_cols]
+    except ValueError as e:
+        raise ValueError(f"Missing a required column for Ree vector calculation: {e}")
+        
+    # Extract targeting arrays
+    mols = arr[:, mol_idx]
+    atom_ids = arr[:, id_idx]
+    coords = arr[:, [x_idx, y_idx, z_idx]].astype(float)
+
+    # 2. Detect Data Type (Single Frame vs Trajectory)
+    has_timesteps = timestep_col in cols
+    if has_timesteps:
+        timesteps = arr[:, cols.index(timestep_col)]
+    else:
+        timesteps = np.zeros(len(arr))
+
+    unique_timesteps = np.unique(timesteps)
+    all_frames_data = []
+
+    # 3. Compute Ree vectors per frame using tqdm
+    for ts in tqdm(unique_timesteps, disable=len(unique_timesteps) <= 1, desc="Calculating Ree vectors"):
+        # Isolate the frame
+        ts_mask = (timesteps == ts)
+        ts_mols = mols[ts_mask]
+        ts_atom_ids = atom_ids[ts_mask]
+        ts_coords = coords[ts_mask]
+        
+        # Sort atoms first by molecule ID, then by atom ID 
+        sort_keys = np.lexsort((ts_atom_ids, ts_mols))
+        sorted_mols = ts_mols[sort_keys]
+        sorted_coords = ts_coords[sort_keys]
+
+        # Find the starting and ending indices of every molecule
+        _, start_indices = np.unique(sorted_mols, return_index=True)
+        end_indices = np.append(start_indices[1:] - 1, len(sorted_mols) - 1)
+
+        # Extract coordinates for the first and last atoms
+        start_coords = sorted_coords[start_indices]
+        end_coords = sorted_coords[end_indices]
+
+        # Calculate the vector components: dx, dy, dz
+        ree_vectors = end_coords - start_coords
+        
+        # Extract the unique molecule IDs corresponding to these vectors
+        unique_mol_ids = sorted_mols[start_indices]
+        
+        # Create an array of the current timestep to match the length of our results
+        ts_array = np.full(len(unique_mol_ids), ts)
+        
+        # Stack everything together into a 2D array for this frame
+        frame_data = np.column_stack((ts_array, unique_mol_ids, ree_vectors))
+        all_frames_data.append(frame_data)
+
+    # 4. Compile and Return Data
+    # Vertically stack all the frame data blocks
+    final_array = np.vstack(all_frames_data)
+    
+    # Convert to a DataFrame for clean downstream handling
+    result_df = pd.DataFrame(
+        final_array, 
+        columns=[timestep_col, molecule_col, 'dx', 'dy', 'dz']
+    )
+    
+    # Cast IDs back to integers (column_stack forces floats if coords are floats)
+    result_df[timestep_col] = result_df[timestep_col].astype(int)
+    result_df[molecule_col] = result_df[molecule_col].astype(int)
+    
+    return result_df
